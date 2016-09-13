@@ -7,37 +7,32 @@ using CQRSMicroservices.Framework;
 
 namespace CQRSMicroservices.ServiceFabric.QueryModelBuilderService
 {
-  internal static class Program
-  {
-    /// <summary>
-    /// This is the entry point of the service host process.
-    /// </summary>
-    private static void Main()
+    using Microsoft.ServiceFabric.Services.Runtime;
+
+    internal static class Program
     {
-      try
-      {
-        // Creating a FabricRuntime connects this host process to the Service Fabric runtime.
-        using(FabricRuntime fabricRuntime = FabricRuntime.Create())
+        /// <summary>
+        /// This is the entry point of the service host process.
+        /// </summary>
+        private static void Main()
         {
-          CqrsApplication.SetService<IDeserializer>(new Deserializer());
-          CqrsApplication.SetService(new QueryRepository());
+            try
+            {
+                CqrsApplication.SetService<IDeserializer>(new Deserializer());
+                CqrsApplication.SetService(new QueryRepository());
+                ServiceRuntime.RegisterServiceAsync("QueryModelBuilderServiceType", context => new QueryModelBuilderService(context)).GetAwaiter().GetResult();
 
-          // The ServiceManifest.XML file defines one or more service type names.
-          // RegisterServiceType maps a service type name to a .NET class.
-          // When Service Fabric creates an instance of this service type,
-          // an instance of the class is created in this host process.
-          fabricRuntime.RegisterServiceType("QueryModelBuilderServiceType", typeof(QueryModelBuilderService));
+                ServiceEventSource.Current.ServiceTypeRegistered(Process.GetCurrentProcess().Id,
+                    typeof(QueryModelBuilderService).Name);
 
-          ServiceEventSource.Current.ServiceTypeRegistered(Process.GetCurrentProcess().Id, typeof(QueryModelBuilderService).Name);
-
-          Thread.Sleep(Timeout.Infinite);  // Prevents this host process from terminating to keep the service host process running.
+                Thread.Sleep(Timeout.Infinite);
+                    // Prevents this host process from terminating to keep the service host process running.
+            }
+            catch (Exception e)
+            {
+                ServiceEventSource.Current.ServiceHostInitializationFailed(e.ToString());
+                throw;
+            }
         }
-      }
-      catch(Exception e)
-      {
-        ServiceEventSource.Current.ServiceHostInitializationFailed(e.ToString());
-        throw;
-      }
     }
-  }
 }

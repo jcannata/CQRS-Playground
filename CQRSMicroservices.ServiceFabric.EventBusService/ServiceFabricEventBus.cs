@@ -8,7 +8,9 @@ using Microsoft.ServiceFabric.Services.Remoting.Client;
 
 namespace CQRSMicroservices.ServiceFabric.EventBusService
 {
-  public class ServiceFabricEventBus : EventBus
+    using Microsoft.ServiceFabric.Services.Client;
+
+    public class ServiceFabricEventBus : EventBus
   {
     public override async Task Dispatch(Event @event)
     {
@@ -19,10 +21,11 @@ namespace CQRSMicroservices.ServiceFabric.EventBusService
           handlers.Select(b =>
           {
             var builderType = b.GetType();
+              var partition = new ServicePartitionKey($"{builderType.FullName}, {builderType.Assembly.GetName().Name}");
             var queryModelBuilderService = ServiceProxy.Create<IQueryModelBuilderService>(
-              $"{builderType.FullName}, {builderType.Assembly.GetName().Name}",
-              new Uri("fabric:/CQRSMicroservices.ServiceFabric.Application/QueryModelBuilderService"
-            ));
+                new Uri("fabric:/CQRSMicroservices.ServiceFabric.Application/QueryModelBuilderService"),
+                partition
+              );
             return queryModelBuilderService.Handle(@event.ToJson());
           })
         );

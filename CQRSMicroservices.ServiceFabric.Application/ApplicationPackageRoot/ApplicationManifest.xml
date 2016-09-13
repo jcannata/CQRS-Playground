@@ -9,6 +9,8 @@
     <Parameter Name="EventBusService_MinReplicaSetSize" DefaultValue="2" />
     <Parameter Name="EventBusService_PartitionCount" DefaultValue="1" />
     <Parameter Name="EventBusService_TargetReplicaSetSize" DefaultValue="3" />
+    <Parameter Name="AggregateRootActorService_MinReplicaSetSize" DefaultValue="1" />
+    <Parameter Name="AggregateRootActorService_TargetReplicaSetSize" DefaultValue="1" />
   </Parameters>
   <ServiceManifestImport>
     <ServiceManifestRef ServiceManifestName="CQRSMicroservices.ServiceFabric.AggregateRootActorPkg" ServiceManifestVersion="1.0.0" />
@@ -26,10 +28,10 @@
     <ConfigOverrides />
   </ServiceManifestImport>
   <DefaultServices>
-    <Service Name="AggregateRootActorService" GeneratedIdRef="ccec184a-598a-45a2-a98b-bec765f87210">
-      <StatelessService ServiceTypeName="AggregateRootActorServiceType">
+    <Service Name="AggregateRootActorService" GeneratedIdRef="f75498c3-e316-434b-b755-066a51383ccf|None">
+      <StatefulService ServiceTypeName="AggregateRootActorServiceType" TargetReplicaSetSize="[AggregateRootActorService_TargetReplicaSetSize]" MinReplicaSetSize="[AggregateRootActorService_MinReplicaSetSize]">
         <UniformInt64Partition PartitionCount="[AggregateRootActorService_PartitionCount]" LowKey="-9223372036854775808" HighKey="9223372036854775807" />
-      </StatelessService>
+      </StatefulService>
     </Service>
     <Service Name="WebService">
       <StatelessService ServiceTypeName="WebServiceType" InstanceCount="[WebService_InstanceCount]">

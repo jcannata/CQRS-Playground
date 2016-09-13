@@ -21,6 +21,11 @@ namespace CQRSMicroservices.ServiceFabric.EventBusService
   {
     private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(0);
 
+      public EventBusService(StatefulServiceContext serviceContext) : base(serviceContext)
+      {
+          
+      }
+
     /// <summary>
     /// Optional override to create listeners (like tcp, http) for this service replica.
     /// </summary>
@@ -29,7 +34,7 @@ namespace CQRSMicroservices.ServiceFabric.EventBusService
     {
       return new[]
       {
-        new ServiceReplicaListener(CreateCommunicationListener)
+        new ServiceReplicaListener(context => this.CreateServiceRemotingListener(context), "rpc", false)
       };
     }
 
@@ -37,10 +42,10 @@ namespace CQRSMicroservices.ServiceFabric.EventBusService
     ///   Creates the communication listener.
     /// </summary>
     /// <returns></returns>
-    private ICommunicationListener CreateCommunicationListener(ServiceInitializationParameters serviceInitializationParameters)
-    {
-      return new ServiceRemotingListener<EventBusService>(serviceInitializationParameters, this);
-    }
+    //private ICommunicationListener CreateCommunicationListener(StatefulServiceContext serviceInitializationParameters)
+    //{
+    //  return new ServiceRemotingListener<EventBusService>(serviceInitializationParameters, this);
+    //}
 
     /// <summary>
     /// This is the main entry point for your service's partition replica. 
@@ -58,8 +63,13 @@ namespace CQRSMicroservices.ServiceFabric.EventBusService
       Handlers.QueryModelBuilders.ToList().ForEach(eventBus.RegisterBuilder);
       var deserializer = new Deserializer();
 
-      var count = (int)await queue.GetCountAsync();
-      if(count > 0)
+        int count = 0;
+        using (var tx = StateManager.CreateTransaction())
+        {
+            count = (int) await queue.GetCountAsync(tx);
+        }
+
+        if(count > 0)
       {
         _semaphore.Release(count);
       }
@@ -70,7 +80,7 @@ namespace CQRSMicroservices.ServiceFabric.EventBusService
 
         using(ITransaction tx = StateManager.CreateTransaction())
         {
-          ConditionalResult<string> dequeueReply = await queue.TryDequeueAsync(tx);
+          ConditionalValue<string> dequeueReply = await queue.TryDequeueAsync(tx);
           if(dequeueReply.HasValue)
           {
             string message = dequeueReply.Value;

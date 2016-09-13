@@ -6,8 +6,9 @@ using Microsoft.ServiceFabric.Actors;
 
 namespace CQRSMicroservices.ServiceFabric.WebService
 {
+    using Microsoft.ServiceFabric.Actors.Client;
 
-  public class ServiceFabricAggregateRootRepository : AggregateRootRepository
+    public class ServiceFabricAggregateRootRepository : AggregateRootRepository
   {
     public override async Task ExecuteOn<T>(Guid aggregateId, Command command)
     {

@@ -2,11 +2,12 @@
 using System.Diagnostics.Tracing;
 using System.Fabric;
 using System.Threading.Tasks;
-using Microsoft.ServiceFabric.Actors;
+using Microsoft.ServiceFabric.Actors.Runtime;
 
 namespace CQRSMicroservices.ServiceFabric.AggregateRootActor
 {
-  [EventSource(Name = "MyCompany-CQRSMicroservices.ServiceFabric.Application-AggregateRootActor")]
+
+    [EventSource(Name = "MyCompany-CQRSMicroservices.ServiceFabric.Application-AggregateRootActor")]
   internal sealed class ActorEventSource : EventSource
   {
     public static readonly ActorEventSource Current = new ActorEventSource();
@@ -61,7 +62,7 @@ namespace CQRSMicroservices.ServiceFabric.AggregateRootActor
     }
 
     [NonEvent]
-    public void ActorMessage(StatelessActor actor, string message, params object[] args)
+    public void ActorMessage(Actor actor, string message, params object[] args)
     {
       if(this.IsEnabled())
       {
@@ -69,36 +70,36 @@ namespace CQRSMicroservices.ServiceFabric.AggregateRootActor
         ActorMessage(
             actor.GetType().ToString(),
             actor.Id.ToString(),
-            actor.ActorService.ServiceInitializationParameters.CodePackageActivationContext.ApplicationTypeName,
-            actor.ActorService.ServiceInitializationParameters.CodePackageActivationContext.ApplicationName,
-            actor.ActorService.ServiceInitializationParameters.ServiceTypeName,
-            actor.ActorService.ServiceInitializationParameters.ServiceName.ToString(),
-            actor.ActorService.ServiceInitializationParameters.PartitionId,
-            actor.ActorService.ServiceInitializationParameters.InstanceId,
+            actor.ActorService.Context.CodePackageActivationContext.ApplicationTypeName,
+            actor.ActorService.Context.CodePackageActivationContext.ApplicationName,
+            actor.ActorService.Context.ServiceTypeName,
+            actor.ActorService.Context.ServiceName.ToString(),
+            actor.ActorService.Context.PartitionId,
+            actor.ActorService.Context.ReplicaOrInstanceId,
             FabricRuntime.GetNodeContext().NodeName,
             finalMessage);
       }
     }
 
-    [NonEvent]
-    public void ActorMessage(StatefulActorBase actor, string message, params object[] args)
-    {
-      if(this.IsEnabled())
-      {
-        string finalMessage = string.Format(message, args);
-        ActorMessage(
-            actor.GetType().ToString(),
-            actor.Id.ToString(),
-            actor.ActorService.ServiceInitializationParameters.CodePackageActivationContext.ApplicationTypeName,
-            actor.ActorService.ServiceInitializationParameters.CodePackageActivationContext.ApplicationName,
-            actor.ActorService.ServiceInitializationParameters.ServiceTypeName,
-            actor.ActorService.ServiceInitializationParameters.ServiceName.ToString(),
-            actor.ActorService.ServiceInitializationParameters.PartitionId,
-            actor.ActorService.ServiceInitializationParameters.ReplicaId,
-            FabricRuntime.GetNodeContext().NodeName,
-            finalMessage);
-      }
-    }
+    //[NonEvent]
+    //public void ActorMessage(Actor actor, string message, params object[] args)
+    //{
+    //  if(this.IsEnabled())
+    //  {
+    //    string finalMessage = string.Format(message, args);
+    //    ActorMessage(
+    //        actor.GetType().ToString(),
+    //        actor.Id.ToString(),
+    //        actor.ActorService.Context.CodePackageActivationContext.ApplicationTypeName,
+    //        actor.ActorService.Context.CodePackageActivationContext.ApplicationName,
+    //        actor.ActorService.Context.ServiceTypeName,
+    //        actor.ActorService.Context.ServiceName.ToString(),
+    //        actor.ActorService.Context.PartitionId,
+    //        actor.ActorService.Context.ReplicaId,
+    //        FabricRuntime.GetNodeContext().NodeName,
+    //        finalMessage);
+    //  }
+    //}
 
     // For very high-frequency events it might be advantageous to raise events using WriteEventCore API.
     // This results in more efficient parameter handling, but requires explicit allocation of EventData structure and unsafe code.

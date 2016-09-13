@@ -1,5 +1,5 @@
 ﻿using CQRSMicroservices.ServiceFabric.Interfaces;
-using Microsoft.ServiceFabric.Actors;
+using Microsoft.ServiceFabric.Actors.Runtime;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -9,12 +9,14 @@ using Newtonsoft.Json.Linq;
 
 namespace CQRSMicroservices.ServiceFabric.AggregateRootActor
 {
-  /// <remarks>
-  /// Each ActorID maps to an instance of this class.
-  /// The IActor1 interface (in a separate DLL that client code can
-  /// reference) defines the operations exposed by Actor1 objects.
-  /// </remarks>
-  internal class AggregateRootActor : StatelessActor, IAggregateRootActor
+
+    /// <remarks>
+    /// Each ActorID maps to an instance of this class.
+    /// The IActor1 interface (in a separate DLL that client code can
+    /// reference) defines the operations exposed by Actor1 objects.
+    /// </remarks>
+    [StatePersistence(StatePersistence.None)]
+    internal class AggregateRootActor : Actor, IAggregateRootActor
   {
     private AggregateRoot _aggregateRoot;
     public async Task ExecuteOn(string aggregateRootType, string command)

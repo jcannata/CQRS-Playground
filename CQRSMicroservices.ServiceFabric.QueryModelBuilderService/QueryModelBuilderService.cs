@@ -21,6 +21,11 @@ namespace CQRSMicroservices.ServiceFabric.QueryModelBuilderService
   {
     private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(0);
 
+      public QueryModelBuilderService(StatefulServiceContext context) : base(context)
+      {
+          
+      }
+
     /// <summary>
     /// Optional override to create listeners (like tcp, http) for this service replica.
     /// </summary>
@@ -29,58 +34,65 @@ namespace CQRSMicroservices.ServiceFabric.QueryModelBuilderService
     {
       return new[]
       {
-        new ServiceReplicaListener(CreateCommunicationListener)
+        new ServiceReplicaListener(context => this.CreateServiceRemotingListener(context), "rpc", false)
       };
     }
 
-    /// <summary>
-    ///   Creates the communication listener.
-    /// </summary>
-    /// <returns></returns>
-    private ICommunicationListener CreateCommunicationListener(ServiceInitializationParameters serviceInitializationParameters)
-    {
-      return new ServiceRemotingListener<QueryModelBuilderService>(serviceInitializationParameters, this);
-    }
+      /// <summary>
+      ///   Creates the communication listener.
+      /// </summary>
+      /// <returns></returns>
+      //private ICommunicationListener CreateCommunicationListener(ServiceInitializationParameters serviceInitializationParameters)
+      //{
+      //  return new ServiceRemotingListener<QueryModelBuilderService>(serviceInitializationParameters, this);
+      //}
 
-    /// <summary>
-    /// This is the main entry point for your service's partition replica. 
-    /// RunAsync executes when the primary replica for this partition has write status.
-    /// </summary>
-    /// <param name="cancellationToken">Canceled when Service Fabric terminates this partition's replica.</param>
-    protected override async Task RunAsync(CancellationToken cancellationToken)
-    {
-      var queryModelBuilder = GetQueryModelBuilder();
-      var queue = await StateManager.GetOrAddAsync<IReliableQueue<string>>("queryModelBuilderQueue");
-
-      var count = (int)await queue.GetCountAsync();
-      if(count > 0)
+      /// <summary>
+      /// This is the main entry point for your service's partition replica. 
+      /// RunAsync executes when the primary replica for this partition has write status.
+      /// </summary>
+      /// <param name="cancellationToken">Canceled when Service Fabric terminates this partition's replica.</param>
+      protected override async Task RunAsync(CancellationToken cancellationToken)
       {
-        _semaphore.Release(count);
-      }
+          var queryModelBuilder = GetQueryModelBuilder();
+          var queue = await StateManager.GetOrAddAsync<IReliableQueue<string>>("queryModelBuilderQueue");
 
-      while(true)
-      {
-        cancellationToken.ThrowIfCancellationRequested();
-
-        using(ITransaction tx = StateManager.CreateTransaction())
-        {
-          ConditionalResult<string> dequeueReply = await queue.TryDequeueAsync(tx);
-          if(dequeueReply.HasValue)
+          int count = 0;
+          using (var tx = StateManager.CreateTransaction())
           {
-            string message = dequeueReply.Value;
-            await queryModelBuilder.Handle(CqrsApplication.GetService<IDeserializer>().CreateEvent(JObject.Parse(message)));
-
-            await tx.CommitAsync();
+              count = (int) await queue.GetCountAsync(tx);
           }
-        }
 
-        await _semaphore.WaitAsync(cancellationToken);
+          if (count > 0)
+          {
+              _semaphore.Release(count);
+          }
+
+          while (true)
+          {
+              cancellationToken.ThrowIfCancellationRequested();
+
+              using (ITransaction tx = StateManager.CreateTransaction())
+              {
+                  ConditionalValue<string> dequeueReply = await queue.TryDequeueAsync(tx);
+                  if (dequeueReply.HasValue)
+                  {
+                      string message = dequeueReply.Value;
+                      await
+                          queryModelBuilder.Handle(
+                              CqrsApplication.GetService<IDeserializer>().CreateEvent(JObject.Parse(message)));
+
+                      await tx.CommitAsync();
+                  }
+              }
+
+              await _semaphore.WaitAsync(cancellationToken);
+          }
       }
-    }
 
-    private QueryModelBuilder GetQueryModelBuilder()
+      private QueryModelBuilder GetQueryModelBuilder()
     {
-      var namedPartition = (NamedPartitionInformation)ServicePartition.PartitionInfo;
+      var namedPartition = (NamedPartitionInformation)Partition.PartitionInfo;
       var queryModelBuilder = (QueryModelBuilder)Activator.CreateInstance(Type.GetType(namedPartition.Name, true));
       return queryModelBuilder;
     }
