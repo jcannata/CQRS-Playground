@@ -25,7 +25,7 @@ namespace CQRSMicroservices.ServiceFabric.AggregateRootActor
                 // For information, see http://aka.ms/servicefabricactorsplatform
 
                 ActorRuntime.RegisterActorAsync<AggregateRootActor>(
-                        (context, actorType) => new ActorService(context, actorType, () => new AggregateRootActor()))
+                        (context, actorType) => new ActorService(context, actorType, (service, id) => new AggregateRootActor(service, id)))
                     .GetAwaiter()
                     .GetResult();
 
